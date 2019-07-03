@@ -12,5 +12,5 @@ type Service struct {
 	Type     string
 	Filename string
 	Status   string
-	Error    string
+	Error    string `json:"error,omitempty"`
 }

@@ -1,6 +1,7 @@
 package status_test
 
 import (
+	"encoding/json"
 	"log"
 	"testing"
 
@@ -18,5 +19,6 @@ func TestGetStatus(t *testing.T) {
 		return
 	}
 
-	log.Printf("%+v", stat)
+	data, _ := json.Marshal(stat)
+	log.Printf("%s", data)
 }
