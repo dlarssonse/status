@@ -9,13 +9,18 @@ import (
 )
 
 func TestGetStatus(t *testing.T) {
-	stat, err := status.GetStatus("test_status.json")
+
+	stat, err := status.ReadFile("test_status.json")
 	if err != nil {
 		t.Errorf("%s", err)
 		return
 	}
 	if stat == nil {
 		t.Errorf("Unable to get testing status.")
+		return
+	}
+	if err = status.GetStatus(stat); err != nil {
+		t.Errorf("%s", err)
 		return
 	}
 

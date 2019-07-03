@@ -4,52 +4,107 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 
+	"github.com/gorilla/mux"
 	gops "github.com/mitchellh/go-ps"
 	"github.com/ricochet2200/go-disk-usage/du"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 )
 
-// GetStatus ...
-func GetStatus(filename string) (*Status, error) {
-	stat := Status{}
+// accessControlHeaders
+func accessControlHeaders(w http.ResponseWriter) {
+	w.Header().Add("Access-Control-Allow-Origin", "*")
+	w.Header().Add("Access-Control-Allow-Methods", "GET, OPTIONS")
+	w.Header().Add("Access-Control-Allow-Headers", "Content-Type, Access-Control-Allow-Headers")
+}
 
+// APIErrorResponse ...
+func errorResponse(w http.ResponseWriter, msg string) {
+	accessControlHeaders(w)
+	w.WriteHeader(http.StatusBadRequest)
+	encoder := json.NewEncoder(w)
+	err := map[string]string{"status": "ERROR", "message": msg}
+	encoder.Encode(err)
+}
+
+// AddMuxRoute ...
+func AddMuxRoute(path string, config *Status, router *mux.Router) {
+	router.Handle(path, Handler(config)).Name("STATUS")
+}
+
+// Handler handles all requests
+func Handler(config *Status) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodOptions {
+			accessControlHeaders(w)
+			return
+		}
+
+		if err := GetStatus(config); err != nil {
+			errorResponse(w, err.Error())
+			return
+		}
+
+		data, err := json.Marshal(config)
+		if err != nil {
+			errorResponse(w, err.Error())
+			return
+		}
+
+		accessControlHeaders(w)
+		w.Header().Add("Content-Type", "application/json")
+		w.Write(data)
+		return
+	})
+}
+
+// ReadFile ...
+func ReadFile(filename string) (*Status, error) {
+	status := Status{}
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}
 
-	err = json.Unmarshal(data, &stat)
+	err = json.Unmarshal(data, &status)
 	if err != nil {
 		return nil, err
 	}
 
-	for i, service := range stat.Services {
+	return &status, nil
+}
+
+// GetStatus ...
+func GetStatus(status *Status) error {
+	var err error
+
+	for i, service := range status.Services {
 		switch service.Type {
 
 		// Process Check
 		case "Process":
 			if err = GetProcessStatus(&service); err != nil {
-				stat.Services[i].Status = "Error"
-				stat.Services[i].Error = err.Error()
+				status.Services[i].Status = "Error"
+				status.Services[i].Error = err.Error()
 			} else {
-				stat.Services[i] = service
+				status.Services[i] = service
 			}
 
 		// Disk space
 		case "Drive Space":
 			if err = GetDriveSpaceStatus(&service); err != nil {
-				stat.Services[i].Status = "Error"
-				stat.Services[i].Error = err.Error()
+				status.Services[i].Status = "Error"
+				status.Services[i].Error = err.Error()
 			} else {
-				stat.Services[i] = service
+				status.Services[i] = service
 			}
 		}
 
 	}
 
-	return &stat, nil
+	return nil
 }
 
 // GetDriveSpaceStatus ...
