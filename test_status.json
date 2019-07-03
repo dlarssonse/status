@@ -1,0 +1,20 @@
+{
+    "name": "Testing",
+    "services": [
+        {
+            "name": "Notepad",
+            "type": "Process",
+            "filename": "go.exe"
+        },
+        {
+            "name": "Drive C",
+            "type": "Drive Space",
+            "filename": "C:"
+        },
+        {
+            "name": "Drive D",
+            "type": "Drive Space",
+            "filename": "D:"
+        }
+    ]
+}
